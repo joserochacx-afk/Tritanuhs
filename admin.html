@@ -536,11 +536,6 @@ function renderClients(clients){
 
 }
 
-if(localStorage.getItem('tritanuhsAdmin') === 'true'){
-
-  openAdminPanel();
-}
-
 function getProducts() {
   return JSON.parse(localStorage.getItem('tritanuhsProducts')) || [];
 }
