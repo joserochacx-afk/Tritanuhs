@@ -536,15 +536,7 @@ function renderClients(clients){
 
 }
 
-function getProducts() {
-  return JSON.parse(localStorage.getItem('tritanuhsProducts')) || [];
-}
-
-function saveProducts(products) {
-  localStorage.setItem('tritanuhsProducts', JSON.stringify(products));
-}
-
-function saveProduct() {
+async function saveProduct() {
   const name = document.getElementById('productName').value.trim();
   const color = document.getElementById('productColor').value.trim();
   const price = Number(document.getElementById('productPrice').value);
@@ -557,21 +549,18 @@ function saveProduct() {
     return;
   }
 
-  const products = getProducts();
-
-  products.push({
-    id: Date.now(),
+  await db.collection('produtos').add({
     name,
     color,
     price,
     image,
     tag,
-    description
+    description,
+    active: true,
+    createdAt: new Date().toLocaleString('pt-BR')
   });
 
-  saveProducts(products);
-
-  alert('Produto salvo com sucesso.');
+  alert('Produto salvo no Firebase com sucesso.');
 
   document.getElementById('productName').value = '';
   document.getElementById('productColor').value = '';
@@ -583,47 +572,51 @@ function saveProduct() {
   renderAdminProducts();
 }
 
-function renderAdminProducts() {
+async function renderAdminProducts() {
   const list = document.getElementById('productsList');
-  const products = getProducts();
-
   if (!list) return;
 
-  if (products.length === 0) {
+  const snapshot = await db.collection('produtos').get();
+
+  if (snapshot.empty) {
     list.innerHTML = '<div class="item">Nenhum produto cadastrado.</div>';
     return;
   }
 
   list.innerHTML = '';
 
-  products.forEach((product, index) => {
+  snapshot.forEach(doc => {
+    const product = doc.data();
+
     list.innerHTML += `
       <div class="item">
-        <strong>${product.name}</strong><br><br>
-        Cor: ${product.color}<br>
-        Preço: R$ ${product.price.toFixed(2).replace('.', ',')}<br>
-        Imagem: ${product.image}<br>
-        Tag: ${product.tag}<br><br>
-        ${product.description}<br><br>
-        <button onclick="deleteProduct(${index})">Excluir produto</button>
+        <strong>${product.name || product.nome}</strong><br><br>
+        Cor: ${product.color || '-'}<br>
+        Preço: R$ ${Number(product.price || product.preco).toFixed(2).replace('.', ',')}<br>
+        Imagem: ${product.image || product.imagem}<br>
+        Tag: ${product.tag || '-'}<br><br>
+        ${product.description || product.descricao || ''}<br><br>
+
+        <button onclick="deleteProduct('${doc.id}')">
+          Excluir produto
+        </button>
       </div>
     `;
   });
 }
 
-function deleteProduct(index) {
+async function deleteProduct(id) {
   const confirmDelete = confirm('Deseja excluir este produto?');
 
   if (!confirmDelete) return;
 
-  const products = getProducts();
+  await db.collection('produtos').doc(id).delete();
 
-  products.splice(index, 1);
-
-  saveProducts(products);
+  alert('Produto excluído.');
 
   renderAdminProducts();
 }
+  
 function renderOrders() {
   const list = document.getElementById('ordersList');
   const clients = JSON.parse(localStorage.getItem('tritanuhsClients')) || [];
